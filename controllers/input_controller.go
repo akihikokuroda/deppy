@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,7 +71,9 @@ func (r *InputReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	v := variable{id: string(id),}
 	v.constraints = append(constraints, propertyConstraints...)
-	fmt.Printf("variable: %+v\n", v)
+	for _, c := range v.constraints { 
+		fmt.Printf("constaint: %v: %+v\n", c.String(solver.Identifier(v.id)), c)
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -82,7 +85,7 @@ func (r *InputReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 type Evaluator interface {
-	Evaluate(constraints map[string]string) (solver.Constraint, error)
+	Evaluate(constraints map[string]string) ([]solver.Constraint, error)
 }
 
 func (r *InputReconciler) EvaluateConstraints(inputConstraints []deppyv1alpha1.Constraint) ([]solver.Constraint, error) {
@@ -92,13 +95,13 @@ func (r *InputReconciler) EvaluateConstraints(inputConstraints []deppyv1alpha1.C
 		if !ok {
 			return nil, errors.New("unknown constraint type")	
 		}
-		solverConstraint, err := eval.Evaluate(constraint.Value)
+		solverConstraints, err := eval.Evaluate(constraint.Value)
 		if err != nil {
 			fmt.Printf("error: %+v\n", err)
 			return nil, fmt.Errorf("error: %+v\n", err)
 		}
-		fmt.Printf("solverConstraint: %+v\n", solverConstraint.String("subject"))
-		constraints = append(constraints, solverConstraint) 
+		fmt.Printf("solverConstraint: %+v\n", solverConstraints[0].String("subject"))
+		constraints = append(constraints, solverConstraints...) 
 		
 	}
 	return constraints, nil
@@ -107,7 +110,11 @@ func (r *InputReconciler) EvaluateConstraints(inputConstraints []deppyv1alpha1.C
 
 func InitConstraintMapper() map[string]Evaluator {
 	return map[string]Evaluator {
-		"deppy.package": &packageMapper,
+		"deppy.package":             &packageInstanceMapper,
+		"deppy.api":                 &apiProviderMapper,
+		"deppy.subscription":        &subscriptionMapper,
+		"deppy.invalidsubscription": &invalidSubscriptionMapper,
+		"deppy.bundle":              &bundleMapper,
 	}
 }
 
@@ -119,13 +126,13 @@ func (r *InputReconciler) EvaluateProperties(inputProperties []deppyv1alpha1.Pro
 		if !ok {
 			return "", nil, errors.New("unknown property type")	
 		}
-		solverConstraint, err := eval.Evaluate(property.Value)
+		solverConstraints, err := eval.Evaluate(property.Value)
 		if err != nil {
 			fmt.Printf("error: %+v\n", err)
 			return "", nil, fmt.Errorf("error: %+v\n", err)
 		}
-		fmt.Printf("solverConstraint: %+v\n", solverConstraint.String("subject"))
-		constraints = append(constraints, solverConstraint)
+		fmt.Printf("solverConstraint: %+v\n", solverConstraints[0].String("subject"))
+		constraints = append(constraints, solverConstraints...)
 		for _, value := range property.Value {
 			identifier = identifier + solver.Identifier("/" +value)
 		}
@@ -151,23 +158,112 @@ func (v *variable) Constraints() []solver.Constraint {
 
 
 // Constraint Evaluators
-type Package struct {
+
+// Package Instance
+type PackageInstance struct {
 }
 
-var packageMapper Package
+var packageInstanceMapper PackageInstance
 
-func (p *Package) Evaluate(constraints map[string]string) (solver.Constraint, error){
-	return solver.Mandatory(), nil
+func (p *PackageInstance) Evaluate(constraints map[string]string) ([]solver.Constraint, error){
+	c := []solver.Constraint{}
+	c = append(c, solver.Mandatory())
+	providers := []solver.Identifier{}
+	for key, value := range constraints {
+		if strings.HasPrefix(string(key), "provider.") {
+			providers = append(providers, solver.Identifier(value))
+		}
+	}
+	if len(providers) <= 1 {
+		return nil, errors.New("no provider")
+	}
+	c = append(c, solver.AtMost(1, providers...))	
+	return c, nil
 }
 
-type Dependency struct {
+// API Provider
+type APIProvider struct {
 }
 
-var dependencyMapper Dependency
+var apiProviderMapper APIProvider
 
-func (d *Dependency) Evaluate(constraints map[string]string) (solver.Constraint, error){
-//	constraints["required"]
-	return solver.Dependency(), nil
+func (p *APIProvider) Evaluate(constraints map[string]string) ([]solver.Constraint, error){
+	c := []solver.Constraint{}
+	c = append(c, solver.Mandatory())
+	providers := []solver.Identifier{}
+	for key, value := range constraints {
+		if strings.HasPrefix(string(key), "provider.") {
+			providers = append(providers, solver.Identifier(value))
+		}
+	}
+	if len(providers) <= 1 {
+		return nil, errors.New("no provider")
+	}
+	c = append(c, solver.AtMost(1, providers...))	
+	return c, nil
 }
 
+// Subscription
+type Subscription struct {
+}
 
+var subscriptionMapper Subscription
+
+func (p *Subscription) Evaluate(constraints map[string]string) ([]solver.Constraint, error){
+	c := []solver.Constraint{}
+	c = append(c, solver.Mandatory())
+	dependencies := []solver.Identifier{}
+	for key, value := range constraints {
+		if strings.HasPrefix(string(key), "dependency.") {
+			dependencies = append(dependencies, solver.Identifier(value))
+		}
+	}
+	if len(dependencies) <= 1 {
+		return append(c, solver.Dependency()), nil
+	}
+	c = append(c, solver.Dependency(dependencies...))	
+	return c, nil
+}
+
+// Invalid Subscription
+type InvalidSubscription struct {
+}
+
+var invalidSubscriptionMapper InvalidSubscription
+
+func (p *InvalidSubscription) Evaluate(constraints map[string]string) ([]solver.Constraint, error){
+	c := []solver.Constraint{}
+	c = append(c, solver.Mandatory())
+	c = append(c, solver.Prohibited())
+	return c, nil
+}
+
+// Bundle
+type Bundle struct {
+}
+
+var bundleMapper Bundle
+
+func (p *Bundle) Evaluate(constraints map[string]string) ([]solver.Constraint, error){
+	c := []solver.Constraint{}
+	if constraints["type"] == "Deprecated" {
+		c = append(c, solver.Prohibited())
+	}
+	if constraints["subscription"] == "" && constraints["catalog"] == "virtual" {
+		c = append(c, solver.Mandatory())
+	}
+	dependencies := []solver.Identifier{}
+	for key, value := range constraints {
+		if strings.HasPrefix(string(key), "dependency.") {
+			dependencies = append(dependencies, solver.Identifier(value))
+		}
+	}
+	if len(dependencies) <= 1 {
+		return append(c, solver.Dependency()), nil
+	}
+	c = append(c, solver.Dependency(dependencies...))	
+	return c, nil
+}
+
+func (p *Bundle) Identifier(properties map[string]string) ([]solver.Identifier, error){
+}
