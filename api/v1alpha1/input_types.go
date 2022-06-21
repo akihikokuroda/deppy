@@ -22,23 +22,16 @@ import (
 
 // InputSpec defines the desired state of Input
 type InputSpec struct {
-	InputClassName string       `json:"inputClassName"`
-	Constraints    []Constraint `json:"constraints,omitempty"`
-	Properties     []Property   `json:"properties,omitempty"`
+	InputClassName string            `json:"inputClassName"`
+	Constraints    []Constraint      `json:"constraints,omitempty"`
+	Properties     map[string]string `json:"properties,omitempty"`
 }
 
 type Constraint struct {
 	Type string `json:"type"`
 	//+kubebuilder:validation:Schemaless
 	//+kubebuilder:validation:XPreserveUnknownFields
-	Value map[string]string `json:"value"`
-}
-
-type Property struct {
-	Type string `json:"type"`
-	//+kubebuilder:validation:Schemaless
-	//+kubebuilder:validation:XPreserveUnknownFields
-	Value map[string]string `json:"value"`
+	Value map[string]string `json:"value,omitempty"`
 }
 
 // InputStatus defines the observed state of Input

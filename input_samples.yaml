@@ -1,0 +1,133 @@
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: install-alpha
+spec:
+  inputClassName: classname
+  constraints:
+    - type: core.deppy.io/v1alpha1/Mandatory
+    - type: core.deppy.io/v1alpha1/RequireKeyValue
+      value:
+        key: core.deppy.io/v1alpha1/Package
+        value: alpha
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: global-unique-package-constraint
+spec:
+  inputClassName: classname
+  constraints:
+    - type: core.deppy.io/v1alpha1/Mandatory
+    - type: core.deppy.io/v1alpha1/Unique
+      value:
+        key: core.deppy.io/v1alpha1/Package
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: alpha-v0.1.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: alpha
+    core.deppy.io/v1alpha1/Version: 0.1.0
+  constraints:
+    - type: core.deppy.io/v1alpha1/ConflictPackage
+      value:
+        packageName: gamma
+        versionRange: ">=0.2.0"
+    - type: core.deppy.io/v1alpha1/RequirePackage
+      value:
+        packageName: beta
+        versionRange: ">0.1.0"
+    - type: core.deppy.io/v1alpha1/RequireFilterJS
+      value:
+        packageName: beta
+        versionRange: ">0.1.0"
+        filterFunc: |
+          function filter(item) {
+            let pkg = ""
+            let vers = ""
+            item.Properties.forEach(p => {
+              if (p.Type === "core.deppy.io/v1alpha1/Package") {
+                pkg = p.Value
+              }
+              if (p.Type === "core.deppy.io/v1alpha1/Version") {
+                vers = p.Value
+              }
+            })
+            return (pkg === input.Config.packageName && inSemverRange(input.Config.versionRange, vers))
+          }
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: beta-v0.1.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: beta
+    core.deppy.io/v1alpha1/Version: 0.1.0
+  constraints:
+    - type: core.deppy.io/v1alpha1/RequireKeyValue
+      value:
+        key: core.deppy.io/v1alpha1/Package
+        value: gamma
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: beta-v0.2.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: beta
+    core.deppy.io/v1alpha1/Version: 0.2.0
+  constraints:
+    - type: core.deppy.io/v1alpha1/RequirePackage
+      value:
+        packageName: gamma
+        versionRange: "0.2.0"
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: beta-v0.3.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: beta
+    core.deppy.io/v1alpha1/Version: 0.3.0
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: gamma-v0.1.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: gamma
+    core.deppy.io/v1alpha1/Version: 0.1.0
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: gamma-v0.2.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: gamma
+    core.deppy.io/v1alpha1/Version: 0.2.0
+---
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: gamma-v0.3.0
+spec:
+  inputClassName: classname
+  properties:
+    core.deppy.io/v1alpha1/Package: gamma
+    core.deppy.io/v1alpha1/Version: 0.3.0
+

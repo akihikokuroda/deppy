@@ -44,23 +44,14 @@ spec:
                       x-kubernetes-preserve-unknown-fields: true
                   required:
                   - type
-                  - value
                   type: object
                 type: array
               inputClassName:
                 type: string
               properties:
-                items:
-                  properties:
-                    type:
-                      type: string
-                    value:
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - type
-                  - value
-                  type: object
-                type: array
+                additionalProperties:
+                  type: string
+                type: object
             required:
             - inputClassName
             type: object

@@ -1,0 +1,16 @@
+apiVersion: core.deppy.io/v1alpha1
+kind: Input
+metadata:
+  name: bundle-v0.0.1
+spec:
+  constraints:
+  - type: deppy.package
+    value:
+      provider.1: "bundle1"
+      provider.2: "bundle2"
+      extra:      "bundle3"
+  properties:
+     package: "main"
+     version: v1.0.0
+  inputClassName: "simple"
+
