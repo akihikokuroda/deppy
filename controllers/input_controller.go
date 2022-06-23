@@ -113,13 +113,13 @@ func (r *InputReconciler) EvaluateConstraints(inputs *deppyv1alpha1.InputList) (
 
 func InitConstraintMapper() map[string]Evaluator {
 	return map[string]Evaluator {
-		"deppy.package":                          &packageInstanceMapper,
-		"core.deppy.io/v1alpha1/Mandatory":       &mandatoryMapper,
-		"core.deppy.io/v1alpha1/RequireKeyValue": &requireKeyValueMapper,
-		"core.deppy.io/v1alpha1/Unique":          &uniqueMapper,
-		"core.deppy.io/v1alpha1/ConflictPackage": &conflictPackageMapper,
-		"core.deppy.io/v1alpha1/RequirePackage":  &requirePackageMapper,
-		"core.deppy.io/v1alpha1/RequireFilterJS": &requireFilterCelMapper,
+		"deppy.package":   &packageInstanceMapper,
+		"Mandatory":       &mandatoryMapper,
+		"RequireKeyValue": &requireKeyValueMapper,
+		"Unique":          &uniqueMapper,
+		"ConflictPackage": &conflictPackageMapper,
+		"RequirePackage":  &requirePackageMapper,
+		"RequireFilterJS": &requireFilterCelMapper,
 	}
 }
 
@@ -180,21 +180,26 @@ var requirePackageMapper RequirePackage
 
 func (r *RequirePackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
 	fmt.Printf("RequirePackage\n")
-	onever, _ := semver.Make(constraint["core.deppy.io/v1alpha1/Version"])
-	verrange, _ := semver.ParseRange(constraint["core.deppy.io/v1alpha1/Version"])
+	onever, _ := semver.Make(constraint["versionRange"])
+	verrange, _ := semver.ParseRange(constraint["versionRange"])
+	fmt.Printf("onever: %+v, verrange: %+v\n", onever, verrange) 
 	require := []solver.Identifier{}
 	for i, id := range ids {
+		if i == exclude {
+			continue
+		}
 		var pkg string
 		var vars semver.Version
 		property := properties[i]
-		if s, ok := property["packageName"]; ok {
+		if s, ok := property["Package"]; ok {
 			pkg = s
 		}
-		if s, ok := property["versionRange"]; ok {
+		if s, ok := property["Version"]; ok {
 			vars, _ = semver.Make(s)
 		}
-		
-		if constraint["core.deppy.io/v1alpha1/Package"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
+		fmt.Printf("pkg: %+v, vars: %+v\n", pkg, vars)
+		if constraint["packageName"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
+		fmt.Printf("Adding %+v\n", id)
 			require = append(require, solver.Identifier(id))
 		}
 	}
@@ -209,21 +214,24 @@ var conflictPackageMapper ConflictPackage
 
 func (r *ConflictPackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
 	fmt.Printf("RequirePackage\n")
-	onever, _ := semver.Make(constraint["core.deppy.io/v1alpha1/Version"])
-	verrange, _ := semver.ParseRange(constraint["core.deppy.io/v1alpha1/Version"])
+	onever, _ := semver.Make(constraint["versionRange"])
+	verrange, _ := semver.ParseRange(constraint["versionRange"])
 	conflict := []solver.Constraint{}
 	for i, id := range ids {
+		if i == exclude {
+			continue
+		}
 		var pkg string
 		var vars semver.Version
 		property := properties[i]
-		if s, ok := property["packageName"]; ok {
+		if s, ok := property["Package"]; ok {
 			pkg = s
 		}
-		if s, ok := property["versionRange"]; ok {
+		if s, ok := property["Version"]; ok {
 			vars, _ = semver.Make(s)
 		}
 		
-		if constraint["core.deppy.io/v1alpha1/Package"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
+		if constraint["packageName"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
 			conflict = append(conflict, solver.Conflict(solver.Identifier(id)))
 		}
 	}
@@ -240,6 +248,9 @@ func (r *RequireKeyValue) Evaluate(constraint map[string]string, ids []string, p
 	fmt.Printf("RequireKeyValue\n")
 	require := []solver.Identifier{}
 	for i, id := range ids {
+		if i == exclude {
+			continue
+		}
 		property := properties[i]
 		if value, ok := property[constraint["key"]]; ok {
 			if value == constraint["value"] {
@@ -261,17 +272,24 @@ func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties
 	unique := []solver.Constraint{}
 	valueToIDList := map[string][]solver.Identifier{}
 	for i, id := range ids {
+		if i == exclude {
+			continue
+		}
 		property := properties[i]
 		if value, ok := property[constraint["key"]]; ok {
+		fmt.Printf("Package: %v, ID: %v\n", value, id)
 			iDList, ok := valueToIDList[value];
 			if !ok {
+			fmt.Printf("new iDList\n")
 				iDList = []solver.Identifier{}
-				valueToIDList[value] = iDList
 			}
 			iDList = append(iDList, solver.Identifier(id))
+			valueToIDList[value] = iDList
+		fmt.Printf("iDList: %+v\n", iDList)
 		}
 	}
 	for _, list := range valueToIDList {
+	fmt.Printf("AtMost: %+v\n", list)
 		unique = append(unique, solver.AtMost(1, list...)) 
 	}
 	return unique, nil
@@ -307,7 +325,8 @@ func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, 
 		if err != nil {
 			return nil, err
 		}
-		if out != nil {
+		if fmt.Sprintf("%v", out) == "true" {
+		fmt.Printf("*****  adding\n")
 			require = append(require, solver.Identifier(id))
 		}
 	}

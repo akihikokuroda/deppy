@@ -6,10 +6,10 @@ metadata:
 spec:
   inputClassName: classname
   constraints:
-    - type: core.deppy.io/v1alpha1/Mandatory
-    - type: core.deppy.io/v1alpha1/RequireKeyValue
+    - type: Mandatory
+    - type: RequireKeyValue
       value:
-        key: core.deppy.io/v1alpha1/Package
+        key: Package
         value: alpha
 ---
 apiVersion: core.deppy.io/v1alpha1
@@ -19,10 +19,10 @@ metadata:
 spec:
   inputClassName: classname
   constraints:
-    - type: core.deppy.io/v1alpha1/Mandatory
-    - type: core.deppy.io/v1alpha1/Unique
+    - type: Mandatory
+    - type: Unique
       value:
-        key: core.deppy.io/v1alpha1/Package
+        key: Package
 ---
 apiVersion: core.deppy.io/v1alpha1
 kind: Input
@@ -31,36 +31,23 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: alpha
-    core.deppy.io/v1alpha1/Version: 0.1.0
+    Package: alpha
+    Version: 0.1.0
   constraints:
-    - type: core.deppy.io/v1alpha1/ConflictPackage
+    - type: ConflictPackage
       value:
         packageName: gamma
         versionRange: ">=0.2.0"
-    - type: core.deppy.io/v1alpha1/RequirePackage
+    - type: RequirePackage
       value:
         packageName: beta
         versionRange: ">0.1.0"
-    - type: core.deppy.io/v1alpha1/RequireFilterJS
+    - type: RequireFilterJS
       value:
         packageName: beta
         versionRange: ">0.1.0"
         filterFunc: |
-           has(property.version) && property['version'] == "v1.0.0"  
-        #  function filter(item) {
-        #    let pkg = ""
-        #    let vers = ""
-        #    item.Properties.forEach(p => {
-        #      if (p.Type === "core.deppy.io/v1alpha1/Package") {
-        #        pkg = p.Value
-        #      }
-        #      if (p.Type === "core.deppy.io/v1alpha1/Version") {
-        #        vers = p.Value
-        #      }
-        #    })
-        #    return (pkg === input.Config.packageName && inSemverRange(input.Config.versionRange, vers))
-        #  }
+           (has(property.Package) && property['Package'] == "beta") && (has(property.Version) && (property['Version'] == "0.2.0" || property['Version'] == "0.3.0"))   
 ---
 apiVersion: core.deppy.io/v1alpha1
 kind: Input
@@ -69,12 +56,12 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: beta
-    core.deppy.io/v1alpha1/Version: 0.1.0
+    Package: beta
+    Version: 0.1.0
   constraints:
-    - type: core.deppy.io/v1alpha1/RequireKeyValue
+    - type: RequireKeyValue
       value:
-        key: core.deppy.io/v1alpha1/Package
+        key: Package
         value: gamma
 ---
 apiVersion: core.deppy.io/v1alpha1
@@ -84,10 +71,10 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: beta
-    core.deppy.io/v1alpha1/Version: 0.2.0
+    Package: beta
+    Version: 0.2.0
   constraints:
-    - type: core.deppy.io/v1alpha1/RequirePackage
+    - type: RequirePackage
       value:
         packageName: gamma
         versionRange: "0.2.0"
@@ -99,8 +86,8 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: beta
-    core.deppy.io/v1alpha1/Version: 0.3.0
+    Package: beta
+    Version: 0.3.0
 ---
 apiVersion: core.deppy.io/v1alpha1
 kind: Input
@@ -109,8 +96,8 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: gamma
-    core.deppy.io/v1alpha1/Version: 0.1.0
+    Package: gamma
+    Version: 0.1.0
 ---
 apiVersion: core.deppy.io/v1alpha1
 kind: Input
@@ -119,8 +106,8 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: gamma
-    core.deppy.io/v1alpha1/Version: 0.2.0
+    Package: gamma
+    Version: 0.2.0
 ---
 apiVersion: core.deppy.io/v1alpha1
 kind: Input
@@ -129,7 +116,6 @@ metadata:
 spec:
   inputClassName: classname
   properties:
-    core.deppy.io/v1alpha1/Package: gamma
-    core.deppy.io/v1alpha1/Version: 0.3.0
+    Package: gamma
     Version: 0.3.0
 
