@@ -42,10 +42,8 @@ spec:
       value:
         packageName: beta
         versionRange: ">0.1.0"
-    - type: RequireFilterJS
+    - type: RequireFilterCEL
       value:
-        packageName: beta
-        versionRange: ">0.1.0"
         filterFunc: |
            (has(property.Package) && property['Package'] == "beta") && (has(property.Version) && (property['Version'] == "0.2.0" || property['Version'] == "0.3.0"))   
 ---

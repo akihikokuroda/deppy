@@ -113,13 +113,12 @@ func (r *InputReconciler) EvaluateConstraints(inputs *deppyv1alpha1.InputList) (
 
 func InitConstraintMapper() map[string]Evaluator {
 	return map[string]Evaluator {
-		"deppy.package":   &packageInstanceMapper,
-		"Mandatory":       &mandatoryMapper,
-		"RequireKeyValue": &requireKeyValueMapper,
-		"Unique":          &uniqueMapper,
-		"ConflictPackage": &conflictPackageMapper,
-		"RequirePackage":  &requirePackageMapper,
-		"RequireFilterJS": &requireFilterCelMapper,
+		"Mandatory":        &mandatoryMapper,
+		"RequireKeyValue":  &requireKeyValueMapper,
+		"Unique":           &uniqueMapper,
+		"ConflictPackage":  &conflictPackageMapper,
+		"RequirePackage":   &requirePackageMapper,
+		"RequireFilterCEL": &requireFilterCelMapper,
 	}
 }
 
@@ -140,27 +139,6 @@ func (v *variable) Constraints() []solver.Constraint {
 
 // Constraint Evaluators
 
-// Package Instance
-type PackageInstance struct {
-}
-
-var packageInstanceMapper PackageInstance
-
-func (p *PackageInstance) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("==============================\n")
-	fmt.Printf("ID: %v\n", exclude)
-	for key, value := range constraint {
-		fmt.Printf("constraint: %s:%s\n", key, value)
-	}
-	for i, id := range ids {
-		fmt.Printf("id:%s\n", id)
-		for key, value := range properties[i]{
-			fmt.Printf("property[%v]: %s:%s\n", i, key, value)
-		}
-	}
-	return nil, nil
-}
-
 // Mandatory
 type Mandatory struct {
 }
@@ -168,7 +146,6 @@ type Mandatory struct {
 var mandatoryMapper Mandatory
 
 func (m *Mandatory) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("Mandatory\n")
 	return []solver.Constraint{solver.Mandatory()}, nil
 }
 
@@ -179,10 +156,8 @@ type RequirePackage struct {
 var requirePackageMapper RequirePackage
 
 func (r *RequirePackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("RequirePackage\n")
 	onever, _ := semver.Make(constraint["versionRange"])
 	verrange, _ := semver.ParseRange(constraint["versionRange"])
-	fmt.Printf("onever: %+v, verrange: %+v\n", onever, verrange) 
 	require := []solver.Identifier{}
 	for i, id := range ids {
 		if i == exclude {
@@ -197,9 +172,7 @@ func (r *RequirePackage) Evaluate(constraint map[string]string, ids []string, pr
 		if s, ok := property["Version"]; ok {
 			vars, _ = semver.Make(s)
 		}
-		fmt.Printf("pkg: %+v, vars: %+v\n", pkg, vars)
 		if constraint["packageName"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
-		fmt.Printf("Adding %+v\n", id)
 			require = append(require, solver.Identifier(id))
 		}
 	}
@@ -213,7 +186,6 @@ type ConflictPackage struct {
 var conflictPackageMapper ConflictPackage
 
 func (r *ConflictPackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("RequirePackage\n")
 	onever, _ := semver.Make(constraint["versionRange"])
 	verrange, _ := semver.ParseRange(constraint["versionRange"])
 	conflict := []solver.Constraint{}
@@ -245,7 +217,6 @@ type RequireKeyValue struct {
 var requireKeyValueMapper RequireKeyValue
 
 func (r *RequireKeyValue) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("RequireKeyValue\n")
 	require := []solver.Identifier{}
 	for i, id := range ids {
 		if i == exclude {
@@ -268,7 +239,6 @@ type Unique struct {
 var uniqueMapper Unique
 
 func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("Unique\n")
 	unique := []solver.Constraint{}
 	valueToIDList := map[string][]solver.Identifier{}
 	for i, id := range ids {
@@ -277,19 +247,15 @@ func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties
 		}
 		property := properties[i]
 		if value, ok := property[constraint["key"]]; ok {
-		fmt.Printf("Package: %v, ID: %v\n", value, id)
 			iDList, ok := valueToIDList[value];
 			if !ok {
-			fmt.Printf("new iDList\n")
 				iDList = []solver.Identifier{}
 			}
 			iDList = append(iDList, solver.Identifier(id))
 			valueToIDList[value] = iDList
-		fmt.Printf("iDList: %+v\n", iDList)
 		}
 	}
 	for _, list := range valueToIDList {
-	fmt.Printf("AtMost: %+v\n", list)
 		unique = append(unique, solver.AtMost(1, list...)) 
 	}
 	return unique, nil
@@ -302,8 +268,6 @@ type RequireFilterCel struct {
 var requireFilterCelMapper RequireFilterCel
 
 func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
-	fmt.Printf("RequireFilterCel\n")
-
 	d := cel.Declarations(decls.NewVar("property", decls.NewMapType(decls.String, decls.String)))
 	env, err := cel.NewEnv(d)
 	if err != nil {
@@ -321,12 +285,10 @@ func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, 
 	require := []solver.Identifier{}
 	for i, id := range ids {
 		out, _, err := prg.Eval(map[string]interface{}{"property": properties[i]})
-		fmt.Printf("*****  %+v\n", out)
 		if err != nil {
 			return nil, err
 		}
 		if fmt.Sprintf("%v", out) == "true" {
-		fmt.Printf("*****  adding\n")
 			require = append(require, solver.Identifier(id))
 		}
 	}
