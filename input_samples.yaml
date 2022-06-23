@@ -47,19 +47,20 @@ spec:
         packageName: beta
         versionRange: ">0.1.0"
         filterFunc: |
-          function filter(item) {
-            let pkg = ""
-            let vers = ""
-            item.Properties.forEach(p => {
-              if (p.Type === "core.deppy.io/v1alpha1/Package") {
-                pkg = p.Value
-              }
-              if (p.Type === "core.deppy.io/v1alpha1/Version") {
-                vers = p.Value
-              }
-            })
-            return (pkg === input.Config.packageName && inSemverRange(input.Config.versionRange, vers))
-          }
+           has(property.version) && property['version'] == "v1.0.0"  
+        #  function filter(item) {
+        #    let pkg = ""
+        #    let vers = ""
+        #    item.Properties.forEach(p => {
+        #      if (p.Type === "core.deppy.io/v1alpha1/Package") {
+        #        pkg = p.Value
+        #      }
+        #      if (p.Type === "core.deppy.io/v1alpha1/Version") {
+        #        vers = p.Value
+        #      }
+        #    })
+        #    return (pkg === input.Config.packageName && inSemverRange(input.Config.versionRange, vers))
+        #  }
 ---
 apiVersion: core.deppy.io/v1alpha1
 kind: Input
@@ -130,4 +131,5 @@ spec:
   properties:
     core.deppy.io/v1alpha1/Package: gamma
     core.deppy.io/v1alpha1/Version: 0.3.0
+    Version: 0.3.0
 

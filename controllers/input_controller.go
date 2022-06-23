@@ -25,7 +25,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
+	semver "github.com/blang/semver/v4"
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/checker/decls"
+	
 	deppyv1alpha1 "github.com/operator-framework/deppy/api/v1alpha1"
 	"github.com/operator-framework/deppy/internal/solver"
 )
@@ -55,12 +58,9 @@ func (r *InputReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err := r.List(ctx, inputList); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	fmt.Printf("processing input %+v\n", inputList)
 	variables, err := r.EvaluateConstraints(inputList)
 	if err != nil {
 		fmt.Printf("error: %+v\n", err)
-	} else {
-		fmt.Printf("variables: %+v\n", variables)
 	}
 
 	for _, v := range variables { 
@@ -113,7 +113,13 @@ func (r *InputReconciler) EvaluateConstraints(inputs *deppyv1alpha1.InputList) (
 
 func InitConstraintMapper() map[string]Evaluator {
 	return map[string]Evaluator {
-		"deppy.package":             &packageInstanceMapper,
+		"deppy.package":                          &packageInstanceMapper,
+		"core.deppy.io/v1alpha1/Mandatory":       &mandatoryMapper,
+		"core.deppy.io/v1alpha1/RequireKeyValue": &requireKeyValueMapper,
+		"core.deppy.io/v1alpha1/Unique":          &uniqueMapper,
+		"core.deppy.io/v1alpha1/ConflictPackage": &conflictPackageMapper,
+		"core.deppy.io/v1alpha1/RequirePackage":  &requirePackageMapper,
+		"core.deppy.io/v1alpha1/RequireFilterJS": &requireFilterCelMapper,
 	}
 }
 
@@ -141,6 +147,8 @@ type PackageInstance struct {
 var packageInstanceMapper PackageInstance
 
 func (p *PackageInstance) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("==============================\n")
+	fmt.Printf("ID: %v\n", exclude)
 	for key, value := range constraint {
 		fmt.Printf("constraint: %s:%s\n", key, value)
 	}
@@ -153,3 +161,155 @@ func (p *PackageInstance) Evaluate(constraint map[string]string, ids []string, p
 	return nil, nil
 }
 
+// Mandatory
+type Mandatory struct {
+}
+
+var mandatoryMapper Mandatory
+
+func (m *Mandatory) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("Mandatory\n")
+	return []solver.Constraint{solver.Mandatory()}, nil
+}
+
+// Require Package
+type RequirePackage struct {
+}
+
+var requirePackageMapper RequirePackage
+
+func (r *RequirePackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("RequirePackage\n")
+	onever, _ := semver.Make(constraint["core.deppy.io/v1alpha1/Version"])
+	verrange, _ := semver.ParseRange(constraint["core.deppy.io/v1alpha1/Version"])
+	require := []solver.Identifier{}
+	for i, id := range ids {
+		var pkg string
+		var vars semver.Version
+		property := properties[i]
+		if s, ok := property["packageName"]; ok {
+			pkg = s
+		}
+		if s, ok := property["versionRange"]; ok {
+			vars, _ = semver.Make(s)
+		}
+		
+		if constraint["core.deppy.io/v1alpha1/Package"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
+			require = append(require, solver.Identifier(id))
+		}
+	}
+	return []solver.Constraint{solver.Dependency(require...)}, nil
+}
+
+// Conflict Package
+type ConflictPackage struct {
+}
+
+var conflictPackageMapper ConflictPackage
+
+func (r *ConflictPackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("RequirePackage\n")
+	onever, _ := semver.Make(constraint["core.deppy.io/v1alpha1/Version"])
+	verrange, _ := semver.ParseRange(constraint["core.deppy.io/v1alpha1/Version"])
+	conflict := []solver.Constraint{}
+	for i, id := range ids {
+		var pkg string
+		var vars semver.Version
+		property := properties[i]
+		if s, ok := property["packageName"]; ok {
+			pkg = s
+		}
+		if s, ok := property["versionRange"]; ok {
+			vars, _ = semver.Make(s)
+		}
+		
+		if constraint["core.deppy.io/v1alpha1/Package"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
+			conflict = append(conflict, solver.Conflict(solver.Identifier(id)))
+		}
+	}
+	return conflict, nil
+}
+
+// Require Key Value
+type RequireKeyValue struct {
+}
+
+var requireKeyValueMapper RequireKeyValue
+
+func (r *RequireKeyValue) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("RequireKeyValue\n")
+	require := []solver.Identifier{}
+	for i, id := range ids {
+		property := properties[i]
+		if value, ok := property[constraint["key"]]; ok {
+			if value == constraint["value"] {
+				require = append(require, solver.Identifier(id))
+			}
+		}
+	}
+	return []solver.Constraint{solver.Dependency(require...)}, nil
+}
+
+// Unique
+type Unique struct {
+}
+
+var uniqueMapper Unique
+
+func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("Unique\n")
+	unique := []solver.Constraint{}
+	valueToIDList := map[string][]solver.Identifier{}
+	for i, id := range ids {
+		property := properties[i]
+		if value, ok := property[constraint["key"]]; ok {
+			iDList, ok := valueToIDList[value];
+			if !ok {
+				iDList = []solver.Identifier{}
+				valueToIDList[value] = iDList
+			}
+			iDList = append(iDList, solver.Identifier(id))
+		}
+	}
+	for _, list := range valueToIDList {
+		unique = append(unique, solver.AtMost(1, list...)) 
+	}
+	return unique, nil
+}
+
+// Require Filter Cel
+type RequireFilterCel struct {
+}
+
+var requireFilterCelMapper RequireFilterCel
+
+func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+	fmt.Printf("RequireFilterCel\n")
+
+	d := cel.Declarations(decls.NewVar("property", decls.NewMapType(decls.String, decls.String)))
+	env, err := cel.NewEnv(d)
+	if err != nil {
+		return nil, err
+	}
+	ast, iss := env.Compile(constraint["filterFunc"])
+	if iss.Err() != nil {
+		return nil, iss.Err() 
+	}
+	prg, err := env.Program(ast)
+	if err != nil {
+		return nil, err
+	}
+
+	require := []solver.Identifier{}
+	for i, id := range ids {
+		out, _, err := prg.Eval(map[string]interface{}{"property": properties[i]})
+		fmt.Printf("*****  %+v\n", out)
+		if err != nil {
+			return nil, err
+		}
+		if out != nil {
+			require = append(require, solver.Identifier(id))
+		}
+	}
+	return []solver.Constraint{solver.Dependency(require...)}, nil
+}
