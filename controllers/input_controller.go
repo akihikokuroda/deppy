@@ -21,14 +21,14 @@ import (
 	"errors"
 	"fmt"
 
+	semver "github.com/blang/semver/v4"
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/checker/decls"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	semver "github.com/blang/semver/v4"
-	"github.com/google/cel-go/cel"
-	"github.com/google/cel-go/checker/decls"
-	
+
 	deppyv1alpha1 "github.com/operator-framework/deppy/api/v1alpha1"
 	"github.com/operator-framework/deppy/internal/solver"
 )
@@ -36,7 +36,7 @@ import (
 // InputReconciler reconciles a Input object
 type InputReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme           *runtime.Scheme
 	ConstraintMapper map[string]Evaluator
 }
 
@@ -63,7 +63,7 @@ func (r *InputReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		fmt.Printf("error: %+v\n", err)
 	}
 
-	for _, v := range variables { 
+	for _, v := range variables {
 		fmt.Printf("variable: %+v\n", v)
 	}
 	return ctrl.Result{}, nil
@@ -94,16 +94,16 @@ func (r *InputReconciler) EvaluateConstraints(inputs *deppyv1alpha1.InputList) (
 		for _, constraint := range input.Spec.Constraints {
 			eval, ok := r.ConstraintMapper[constraint.Type]
 			if !ok {
-				return nil, errors.New("unknown constraint type")	
+				return nil, errors.New("unknown constraint type")
 			}
 			constraints, err := eval.Evaluate(constraint.Value, ids, properties, currentInput)
-			if err!= nil {
-				return nil, fmt.Errorf("constraints evaluation error: %w", err)	
+			if err != nil {
+				return nil, fmt.Errorf("constraints evaluation error: %w", err)
 			}
 			allConstraints = append(allConstraints, constraints...)
 		}
 		variable := variable{
-			id: input.GetName(),
+			id:          input.GetName(),
 			constraints: allConstraints,
 		}
 		variables = append(variables, solver.Variable(&variable))
@@ -112,7 +112,7 @@ func (r *InputReconciler) EvaluateConstraints(inputs *deppyv1alpha1.InputList) (
 }
 
 func InitConstraintMapper() map[string]Evaluator {
-	return map[string]Evaluator {
+	return map[string]Evaluator{
 		"Mandatory":        &mandatoryMapper,
 		"RequireKeyValue":  &requireKeyValueMapper,
 		"Unique":           &uniqueMapper,
@@ -136,7 +136,6 @@ func (v *variable) Constraints() []solver.Constraint {
 	return v.constraints
 }
 
-
 // Constraint Evaluators
 
 // Mandatory
@@ -145,7 +144,7 @@ type Mandatory struct {
 
 var mandatoryMapper Mandatory
 
-func (m *Mandatory) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+func (m *Mandatory) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error) {
 	return []solver.Constraint{solver.Mandatory()}, nil
 }
 
@@ -155,7 +154,7 @@ type RequirePackage struct {
 
 var requirePackageMapper RequirePackage
 
-func (r *RequirePackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+func (r *RequirePackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error) {
 	onever, _ := semver.Make(constraint["versionRange"])
 	verrange, _ := semver.ParseRange(constraint["versionRange"])
 	require := []solver.Identifier{}
@@ -185,7 +184,7 @@ type ConflictPackage struct {
 
 var conflictPackageMapper ConflictPackage
 
-func (r *ConflictPackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+func (r *ConflictPackage) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error) {
 	onever, _ := semver.Make(constraint["versionRange"])
 	verrange, _ := semver.ParseRange(constraint["versionRange"])
 	conflict := []solver.Constraint{}
@@ -202,7 +201,7 @@ func (r *ConflictPackage) Evaluate(constraint map[string]string, ids []string, p
 		if s, ok := property["Version"]; ok {
 			vars, _ = semver.Make(s)
 		}
-		
+
 		if constraint["packageName"] == pkg && (onever.Compare(vars) == 0 || (verrange != nil && verrange(vars))) {
 			conflict = append(conflict, solver.Conflict(solver.Identifier(id)))
 		}
@@ -216,7 +215,7 @@ type RequireKeyValue struct {
 
 var requireKeyValueMapper RequireKeyValue
 
-func (r *RequireKeyValue) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+func (r *RequireKeyValue) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error) {
 	require := []solver.Identifier{}
 	for i, id := range ids {
 		if i == exclude {
@@ -238,7 +237,7 @@ type Unique struct {
 
 var uniqueMapper Unique
 
-func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error) {
 	unique := []solver.Constraint{}
 	valueToIDList := map[string][]solver.Identifier{}
 	for i, id := range ids {
@@ -247,7 +246,7 @@ func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties
 		}
 		property := properties[i]
 		if value, ok := property[constraint["key"]]; ok {
-			iDList, ok := valueToIDList[value];
+			iDList, ok := valueToIDList[value]
 			if !ok {
 				iDList = []solver.Identifier{}
 			}
@@ -256,7 +255,7 @@ func (r *Unique) Evaluate(constraint map[string]string, ids []string, properties
 		}
 	}
 	for _, list := range valueToIDList {
-		unique = append(unique, solver.AtMost(1, list...)) 
+		unique = append(unique, solver.AtMost(1, list...))
 	}
 	return unique, nil
 }
@@ -267,7 +266,7 @@ type RequireFilterCel struct {
 
 var requireFilterCelMapper RequireFilterCel
 
-func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error){
+func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, properties []map[string]string, exclude int) ([]solver.Constraint, error) {
 	d := cel.Declarations(decls.NewVar("property", decls.NewMapType(decls.String, decls.String)))
 	env, err := cel.NewEnv(d)
 	if err != nil {
@@ -275,7 +274,7 @@ func (r *RequireFilterCel) Evaluate(constraint map[string]string, ids []string, 
 	}
 	ast, iss := env.Compile(constraint["filterFunc"])
 	if iss.Err() != nil {
-		return nil, iss.Err() 
+		return nil, iss.Err()
 	}
 	prg, err := env.Program(ast)
 	if err != nil {
