@@ -1,5 +1,10 @@
 package constraints
 
+import (
+	"fmt"
+	"strings"
+)
+
 // Mandatory returns a Constraint that will permit only solutions that
 // contain a particular Variable.
 func IMandatory() IConstraint {
@@ -79,4 +84,34 @@ func IOr(identifier Identifier, isSubjectNegated bool, isOperandNegated bool) IC
 		Anchor:         false,
 		Order:          nil,
 	}
+}
+
+func ConstraintMessage(subject Identifier, constratint IConstraint) string {
+	switch constratint.ConstraintType {
+	case "mandatory":
+		return fmt.Sprintf("%s is mandatory", subject)
+	case "prohibited":
+		return fmt.Sprintf("%s is prohibited", subject)
+	case "dependency":
+		ids := constratint.Properties["ids"].([]Identifier)
+		if len(ids) == 0 {
+			return fmt.Sprintf("%s has a dependency without any candidates to satisfy it", subject)
+		}
+		s := make([]string, len(ids))
+		for i, each := range ids {
+			s[i] = string(each)
+		}
+		return fmt.Sprintf("%s requires at least one of %s", subject, strings.Join(s, ", "))
+	case "conflict":
+		return fmt.Sprintf("%s conflicts with %s", subject, constratint.Properties["id"].(Identifier))
+	case "atmost":
+		s := make([]string, len(constratint.Properties["ids"].([]Identifier)))
+		for i, each := range constratint.Properties["ids"].([]Identifier) {
+			s[i] = string(each)
+		}
+		return fmt.Sprintf("%s permits at most %d of %s", subject, constratint.Properties["n"].(int), strings.Join(s, ", "))
+	case "or":
+		return fmt.Sprintf("%s is prohibited", subject)
+	}
+	return ""
 }

@@ -65,7 +65,7 @@ func TestNotSatisfiableError(t *testing.T) {
 				},
 			},
 			String: fmt.Sprintf("constraints not satisfiable: %s",
-				constraints.IMandatory().String("a")),
+				"a"),
 		},
 		{
 			Name: "multiple failures",
@@ -80,7 +80,8 @@ func TestNotSatisfiableError(t *testing.T) {
 				},
 			},
 			String: fmt.Sprintf("constraints not satisfiable: %s, %s",
-				constraints.IMandatory().String("a"), constraints.IProhibited().String("b")),
+				//				constraints.IMandatory().String("a"), constraints.IProhibited().String("b")),
+				"a", "b"),
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {

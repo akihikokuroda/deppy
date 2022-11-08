@@ -66,6 +66,13 @@ func IWithInput(input []pkgconstraints.IVariable) IOption {
 	}
 }
 
+func WithTracer(t ITracer) IOption {
+	return func(s *Isolver) error {
+		s.tracer = t
+		return nil
+	}
+}
+
 var Idefaults = []IOption{
 	func(s *Isolver) error {
 		if s.litMap == nil {
