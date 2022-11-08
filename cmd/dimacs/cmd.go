@@ -55,7 +55,7 @@ func solve(path string) error {
 	}
 
 	// build solver
-	so, err := factory.NewDeppySolver(entitysourcefactory.NewGroup(NewDimacsEntitySource(dimacs)), constraintsfactory.NewConstraintAggregator(NewDimacsConstraintGenerator(dimacs)))
+	so, err := factory.NewDeppySolver(entitysourcefactory.NewGroup(NewDimacsEntitySource(dimacs)), constraintsfactory.INewConstraintAggregator(NewDimacsConstraintGenerator(dimacs)))
 	if err != nil {
 		return err
 	}

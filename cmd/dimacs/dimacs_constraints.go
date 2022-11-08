@@ -10,7 +10,7 @@ import (
 	satconstraints "github.com/operator-framework/deppy/pkg/sat/constraints"
 )
 
-var _ constraints.ConstraintGenerator = &ConstraintGenerator{}
+var _ constraints.IConstraintGenerator = &ConstraintGenerator{}
 
 type ConstraintGenerator struct {
 	dimacs *Dimacs
@@ -22,11 +22,11 @@ func NewDimacsConstraintGenerator(dimacs *Dimacs) *ConstraintGenerator {
 	}
 }
 
-func (d *ConstraintGenerator) GetVariables(ctx context.Context, querier entitysource.EntityQuerier) ([]sat.Variable, error) {
-	varMap := make(map[entitysource.EntityID]*constraints.Variable, len(d.dimacs.variables))
-	variables := make([]sat.Variable, 0, len(d.dimacs.variables))
+func (d *ConstraintGenerator) GetVariables(ctx context.Context, querier entitysource.EntityQuerier) ([]sat.IVariable, error) {
+	varMap := make(map[entitysource.EntityID]*constraints.IVariable, len(d.dimacs.variables))
+	variables := make([]sat.IVariable, 0, len(d.dimacs.variables))
 	if err := querier.Iterate(ctx, func(entity *entitysource.Entity) error {
-		variable := constraints.NewVariable(sat.Identifier(entity.ID()))
+		variable := constraints.INewVariable(sat.Identifier(entity.ID()))
 		variables = append(variables, variable)
 		varMap[entity.ID()] = variable
 		return nil
@@ -46,10 +46,10 @@ func (d *ConstraintGenerator) GetVariables(ctx context.Context, querier entityso
 			// TODO: check constraints haven't already been added to the variable
 			variable := varMap[entitysource.EntityID(strings.TrimPrefix(first, "-"))]
 			if strings.HasPrefix(first, "-") {
-				variable.AddConstraint(satconstraints.Not())
+				variable.AddConstraint(satconstraints.INot())
 			} else {
 				// TODO: is this the right constraint here? (given that its an achoring constraint?)
-				variable.AddConstraint(satconstraints.Mandatory())
+				variable.AddConstraint(satconstraints.IMandatory())
 			}
 			continue
 		}
@@ -60,7 +60,7 @@ func (d *ConstraintGenerator) GetVariables(ctx context.Context, querier entityso
 			negOperand := strings.HasPrefix(second, "-")
 
 			// TODO: this Or constraint is hacky as hell
-			variable.AddConstraint(satconstraints.Or(sat.Identifier(strings.TrimPrefix(second, "-")), negSubject, negOperand))
+			variable.AddConstraint(satconstraints.IOr(sat.Identifier(strings.TrimPrefix(second, "-")), negSubject, negOperand))
 			first = second
 		}
 	}

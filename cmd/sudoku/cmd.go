@@ -24,7 +24,7 @@ func NewSudokuCommand() *cobra.Command {
 func solve() error {
 	// build solver
 	sudoku := NewSudoku()
-	so, err := factory.NewDeppySolver(entitysourcefactory.NewGroup(sudoku), constraintsfactory.NewConstraintAggregator(sudoku))
+	so, err := factory.NewDeppySolver(entitysourcefactory.NewGroup(sudoku), constraintsfactory.INewConstraintAggregator(sudoku))
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,6 @@ import (
 	pkgsolver "github.com/operator-framework/deppy/pkg/solver"
 )
 
-func NewDeppySolver(entitySourceGroup entitysource.EntitySource, constraintAggregator constraints.ConstraintGenerator) (pkgsolver.Solver, error) {
-	return internalsolver.NewDeppySolver(entitySourceGroup, constraintAggregator)
+func NewDeppySolver(entitySourceGroup entitysource.EntitySource, constraintAggregator constraints.IConstraintGenerator) (pkgsolver.Solver, error) {
+	return internalsolver.INewDeppySolver(entitySourceGroup, constraintAggregator)
 }

@@ -16,7 +16,7 @@ import (
 
 var _ entitysource.EntitySource = &Sudoku{}
 
-var _ constraints.ConstraintGenerator = &Sudoku{}
+var _ constraints.IConstraintGenerator = &Sudoku{}
 
 type Sudoku struct {
 	entitysource.EntityQuerier
@@ -50,17 +50,17 @@ func NewSudoku() *Sudoku {
 	}
 }
 
-func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQuerier) ([]sat.Variable, error) {
+func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQuerier) ([]sat.IVariable, error) {
 	// adapted from: https://github.com/go-air/gini/blob/871d828a26852598db2b88f436549634ba9533ff/sudoku_test.go#L10
-	variables := make(map[sat.Identifier]*constraints.Variable, 0)
-	inorder := make([]sat.Variable, 0)
+	variables := make(map[sat.Identifier]*constraints.IVariable, 0)
+	inorder := make([]sat.IVariable, 0)
 	rand.Seed(time.Now().UnixNano())
 
 	// create variables for all number in all positions of the board
 	for row := 0; row < 9; row++ {
 		for col := 0; col < 9; col++ {
 			for n := 0; n < 9; n++ {
-				variable := constraints.NewVariable(sat.Identifier(GetID(row, col, n)))
+				variable := constraints.INewVariable(sat.Identifier(GetID(row, col, n)))
 				variables[variable.Identifier()] = variable
 				inorder = append(inorder, variable)
 			}
@@ -79,7 +79,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 
 			// create clause that the particular position has a number
 			varID := sat.Identifier(fmt.Sprintf("%d-%d has a number", row, col))
-			variable := constraints.NewVariable(varID, satconstraints.Mandatory(), satconstraints.Dependency(ids...))
+			variable := constraints.NewVariable(varID, satconstraints.IMandatory(), satconstraints.IDependency(ids...))
 			variables[varID] = variable
 			inorder = append(inorder, variable)
 		}
@@ -92,7 +92,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 				idA := sat.Identifier(GetID(row, colA, n))
 				variable := variables[idA]
 				for colB := colA + 1; colB < 9; colB++ {
-					variable.AddConstraint(satconstraints.Conflict(sat.Identifier(GetID(row, colB, n))))
+					variable.AddConstraint(satconstraints.IConflict(sat.Identifier(GetID(row, colB, n))))
 				}
 			}
 		}
@@ -105,7 +105,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 				idA := sat.Identifier(GetID(rowA, col, n))
 				variable := variables[idA]
 				for rowB := rowA + 1; rowB < 9; rowB++ {
-					variable.AddConstraint(satconstraints.Conflict(sat.Identifier(GetID(rowB, col, n))))
+					variable.AddConstraint(satconstraints.IConflict(sat.Identifier(GetID(rowB, col, n))))
 				}
 			}
 		}
@@ -124,7 +124,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 				for j := i + 1; j < len(offs); j++ {
 					offB := offs[j]
 					idB := sat.Identifier(GetID(x+offB.x, y+offB.y, n))
-					variable.AddConstraint(satconstraints.Conflict(idB))
+					variable.AddConstraint(satconstraints.IConflict(idB))
 				}
 			}
 		}

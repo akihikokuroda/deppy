@@ -86,3 +86,50 @@ func (zeroConstraint) Order() []Identifier {
 func (zeroConstraint) Anchor() bool {
 	return false
 }
+
+// Constraint implementations limit the circumstances under which a
+// particular Variable can appear in a solution.
+type IConstraint struct {
+	ConstraintType string
+	Properties     map[string]interface{}
+	Anchor         bool
+	Order          []Identifier
+}
+
+// Variable values are the basic unit of problems and solutions
+// understood by this package.
+type IVariable interface {
+	// Identifier returns the Identifier that uniquely identifies
+	// this Variable among all other Variables in a given
+	// problem.
+	Identifier() Identifier
+	// Constraints returns the set of constraints that apply to
+	// this Variable.
+	Constraints() []IConstraint
+}
+
+// zeroVariable is returned by VariableOf in error cases.
+type zeroIVariable struct{}
+
+var _ IVariable = zeroIVariable{}
+
+func (zeroIVariable) Identifier() Identifier {
+	return ""
+}
+
+func (zeroIVariable) Constraints() []IConstraint {
+	return nil
+}
+
+// AppliedConstraint values compose a single Constraint with the
+// Variable it applies to.
+type IAppliedConstraint struct {
+	Variable   IVariable
+	Constraint IConstraint
+}
+
+// String implements fmt.Stringer and returns a human-readable message
+// representing the receiver.
+func (a IAppliedConstraint) String() string {
+	return a.Variable.Identifier().String()
+}
