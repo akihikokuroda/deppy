@@ -11,8 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/operator-framework/deppy/internal/sat"
-	pkgsat "github.com/operator-framework/deppy/pkg/sat"
-	"github.com/operator-framework/deppy/pkg/sat/constraints"
+	"github.com/operator-framework/deppy/pkg/constraints"
 )
 
 type TestScopeCounter struct {
@@ -35,19 +34,19 @@ func (c *TestScopeCounter) Untest() (result int) {
 func TestSearch(t *testing.T) {
 	type tc struct {
 		Name          string
-		Variables     []pkgsat.Variable
+		Variables     []constraints.IVariable
 		TestReturns   []int
 		UntestReturns []int
 		Result        int
-		Assumptions   []pkgsat.Identifier
+		Assumptions   []constraints.Identifier
 	}
 
 	for _, tt := range []tc{
 		{
 			Name: "children popped from back of deque when guess popped",
-			Variables: []pkgsat.Variable{
-				variable("a", constraints.Mandatory(), constraints.Dependency("c")),
-				variable("b", constraints.Mandatory()),
+			Variables: []constraints.IVariable{
+				variable("a", constraints.IMandatory(), constraints.IDependency("c")),
+				variable("b", constraints.IMandatory()),
 				variable("c"),
 			},
 			TestReturns:   []int{0, -1},
@@ -57,16 +56,16 @@ func TestSearch(t *testing.T) {
 		},
 		{
 			Name: "candidates exhausted",
-			Variables: []pkgsat.Variable{
-				variable("a", constraints.Mandatory(), constraints.Dependency("x")),
-				variable("b", constraints.Mandatory(), constraints.Dependency("y")),
+			Variables: []constraints.IVariable{
+				variable("a", constraints.IMandatory(), constraints.IDependency("x")),
+				variable("b", constraints.IMandatory(), constraints.IDependency("y")),
 				variable("x"),
 				variable("y"),
 			},
 			TestReturns:   []int{0, 0, -1, 1},
 			UntestReturns: []int{0},
 			Result:        1,
-			Assumptions:   []pkgsat.Identifier{"a", "b", "y"},
+			Assumptions:   []constraints.Identifier{"a", "b", "y"},
 		},
 	} {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -83,12 +82,12 @@ func TestSearch(t *testing.T) {
 			var depth int
 			counter := &TestScopeCounter{depth: &depth, S: &s}
 
-			lits, err := pkgsat.NewLitMapping(tt.Variables)
+			lits, err := sat.NewILitMapping(tt.Variables)
 			assert.NoError(err)
-			h := sat.Search{
+			h := sat.ISearch{
 				S:      counter,
 				Slits:  lits,
-				Tracer: sat.DefaultTracer{},
+				Tracer: sat.IDefaultTracer{},
 			}
 
 			var anchors []z.Lit
@@ -99,7 +98,7 @@ func TestSearch(t *testing.T) {
 			result, ms, _ := h.Do(context.Background(), anchors)
 
 			assert.Equal(tt.Result, result)
-			var ids []pkgsat.Identifier
+			var ids []constraints.Identifier
 			for _, m := range ms {
 				ids = append(ids, lits.VariableOf(m).Identifier())
 			}

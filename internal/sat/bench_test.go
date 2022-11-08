@@ -7,11 +7,10 @@ import (
 	"testing"
 
 	"github.com/operator-framework/deppy/internal/sat"
-	pkgsat "github.com/operator-framework/deppy/pkg/sat"
-	"github.com/operator-framework/deppy/pkg/sat/constraints"
+	pkgconstraints "github.com/operator-framework/deppy/pkg/constraints"
 )
 
-var BenchmarkInput = func() []pkgsat.Variable {
+var BenchmarkInput = func() []pkgconstraints.IVariable {
 	const (
 		length      = 256
 		seed        = 9
@@ -22,18 +21,18 @@ var BenchmarkInput = func() []pkgsat.Variable {
 		nConflict   = 3
 	)
 
-	id := func(i int) pkgsat.Identifier {
-		return pkgsat.Identifier(strconv.Itoa(i))
+	id := func(i int) pkgconstraints.Identifier {
+		return pkgconstraints.Identifier(strconv.Itoa(i))
 	}
 
 	variable := func(i int) TestVariable {
-		var c []pkgsat.Constraint
+		var c []pkgconstraints.IConstraint
 		if rand.Float64() < pMandatory {
-			c = append(c, constraints.Mandatory())
+			c = append(c, pkgconstraints.IMandatory())
 		}
 		if rand.Float64() < pDependency {
 			n := rand.Intn(nDependency-1) + 1
-			var d []pkgsat.Identifier
+			var d []pkgconstraints.Identifier
 			for x := 0; x < n; x++ {
 				y := i
 				for y == i {
@@ -41,7 +40,7 @@ var BenchmarkInput = func() []pkgsat.Variable {
 				}
 				d = append(d, id(y))
 			}
-			c = append(c, constraints.Dependency(d...))
+			c = append(c, pkgconstraints.IDependency(d...))
 		}
 		if rand.Float64() < pConflict {
 			n := rand.Intn(nConflict-1) + 1
@@ -50,7 +49,7 @@ var BenchmarkInput = func() []pkgsat.Variable {
 				for y == i {
 					y = rand.Intn(length)
 				}
-				c = append(c, constraints.Conflict(id(y)))
+				c = append(c, pkgconstraints.IConflict(id(y)))
 			}
 		}
 		return TestVariable{
@@ -60,7 +59,7 @@ var BenchmarkInput = func() []pkgsat.Variable {
 	}
 
 	rand.Seed(seed)
-	result := make([]pkgsat.Variable, length)
+	result := make([]pkgconstraints.IVariable, length)
 	for i := range result {
 		result[i] = variable(i)
 	}
@@ -69,7 +68,7 @@ var BenchmarkInput = func() []pkgsat.Variable {
 
 func BenchmarkSolve(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		s, err := sat.NewSolver(sat.WithInput(BenchmarkInput))
+		s, err := sat.INewSolver(sat.IWithInput(BenchmarkInput))
 		if err != nil {
 			b.Fatalf("failed to initialize solver: %s", err)
 		}
@@ -82,7 +81,7 @@ func BenchmarkSolve(b *testing.B) {
 
 func BenchmarkNewInput(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_, err := sat.NewSolver(sat.WithInput(BenchmarkInput))
+		_, err := sat.INewSolver(sat.IWithInput(BenchmarkInput))
 		if err != nil {
 			b.Fatalf("failed to initialize solver: %s", err)
 		}
