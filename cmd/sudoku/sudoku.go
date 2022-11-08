@@ -11,7 +11,6 @@ import (
 	"github.com/operator-framework/deppy/pkg/entitysource"
 	"github.com/operator-framework/deppy/pkg/entitysource/factory"
 	"github.com/operator-framework/deppy/pkg/sat"
-	satconstraints "github.com/operator-framework/deppy/pkg/sat/constraints"
 )
 
 var _ entitysource.EntitySource = &Sudoku{}
@@ -79,7 +78,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 
 			// create clause that the particular position has a number
 			varID := sat.Identifier(fmt.Sprintf("%d-%d has a number", row, col))
-			variable := constraints.NewVariable(varID, satconstraints.IMandatory(), satconstraints.IDependency(ids...))
+			variable := constraints.INewVariable(varID, sat.IMandatory(), sat.IDependency(ids...))
 			variables[varID] = variable
 			inorder = append(inorder, variable)
 		}
@@ -92,7 +91,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 				idA := sat.Identifier(GetID(row, colA, n))
 				variable := variables[idA]
 				for colB := colA + 1; colB < 9; colB++ {
-					variable.AddConstraint(satconstraints.IConflict(sat.Identifier(GetID(row, colB, n))))
+					variable.AddConstraint(sat.IConflict(sat.Identifier(GetID(row, colB, n))))
 				}
 			}
 		}
@@ -105,7 +104,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 				idA := sat.Identifier(GetID(rowA, col, n))
 				variable := variables[idA]
 				for rowB := rowA + 1; rowB < 9; rowB++ {
-					variable.AddConstraint(satconstraints.IConflict(sat.Identifier(GetID(rowB, col, n))))
+					variable.AddConstraint(sat.IConflict(sat.Identifier(GetID(rowB, col, n))))
 				}
 			}
 		}
@@ -124,7 +123,7 @@ func (s Sudoku) GetVariables(ctx context.Context, querier entitysource.EntityQue
 				for j := i + 1; j < len(offs); j++ {
 					offB := offs[j]
 					idB := sat.Identifier(GetID(x+offB.x, y+offB.y, n))
-					variable.AddConstraint(satconstraints.IConflict(idB))
+					variable.AddConstraint(sat.IConflict(idB))
 				}
 			}
 		}

@@ -9,23 +9,22 @@ import (
 	pkgsat "github.com/operator-framework/deppy/pkg/sat"
 )
 
-/*
-	type Choice struct {
-		prev, next *Choice
-		index      int // index of next unguessed literal
-		candidates []z.Lit
-	}
+type Choice struct {
+	prev, next *Choice
+	index      int // index of next unguessed literal
+	candidates []z.Lit
+}
 
-	type guess struct {
-		m          z.Lit // if z.LitNull, this choice was satisfied by a previous assumption
-		index      int   // index of guessed literal in candidates
-		children   int   // number of choices introduced by making this guess
-		candidates []z.Lit
-	}
-*/
+type guess struct {
+	m          z.Lit // if z.LitNull, this choice was satisfied by a previous assumption
+	index      int   // index of guessed literal in candidates
+	children   int   // number of choices introduced by making this guess
+	candidates []z.Lit
+}
+
 type ISearch struct {
 	S                      inter.S
-	Slits                  *pkgsat.ILitMapping
+	Slits                  *ILitMapping
 	assumptions            map[z.Lit]struct{} // set of assumed lits - duplicates guess stack - for fast lookup
 	guesses                []guess            // stack of assumed guesses
 	headChoice, tailChoice *Choice            // deque of unmade Choices

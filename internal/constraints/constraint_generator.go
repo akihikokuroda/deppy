@@ -8,6 +8,7 @@ import (
 	"github.com/operator-framework/deppy/pkg/sat"
 )
 
+/*
 var _ pkgconstraints.ConstraintGenerator = &ConstraintAggregator{}
 
 // ConstraintAggregator is a simple structure that aggregates different constraint generators
@@ -34,7 +35,7 @@ func (b *ConstraintAggregator) GetVariables(ctx context.Context, entityQuerier e
 	}
 	return variables, nil
 }
-
+*/
 // ConstraintAggregator is a simple structure that aggregates different constraint generators
 // and collects all generated solver constraints
 type IConstraintAggregator struct {

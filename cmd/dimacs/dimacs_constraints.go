@@ -7,7 +7,6 @@ import (
 	"github.com/operator-framework/deppy/pkg/constraints"
 	"github.com/operator-framework/deppy/pkg/entitysource"
 	"github.com/operator-framework/deppy/pkg/sat"
-	satconstraints "github.com/operator-framework/deppy/pkg/sat/constraints"
 )
 
 var _ constraints.IConstraintGenerator = &ConstraintGenerator{}
@@ -46,10 +45,10 @@ func (d *ConstraintGenerator) GetVariables(ctx context.Context, querier entityso
 			// TODO: check constraints haven't already been added to the variable
 			variable := varMap[entitysource.EntityID(strings.TrimPrefix(first, "-"))]
 			if strings.HasPrefix(first, "-") {
-				variable.AddConstraint(satconstraints.INot())
+				variable.AddConstraint(sat.INot())
 			} else {
 				// TODO: is this the right constraint here? (given that its an achoring constraint?)
-				variable.AddConstraint(satconstraints.IMandatory())
+				variable.AddConstraint(sat.IMandatory())
 			}
 			continue
 		}
@@ -60,7 +59,7 @@ func (d *ConstraintGenerator) GetVariables(ctx context.Context, querier entityso
 			negOperand := strings.HasPrefix(second, "-")
 
 			// TODO: this Or constraint is hacky as hell
-			variable.AddConstraint(satconstraints.IOr(sat.Identifier(strings.TrimPrefix(second, "-")), negSubject, negOperand))
+			variable.AddConstraint(sat.IOr(sat.Identifier(strings.TrimPrefix(second, "-")), negSubject, negOperand))
 			first = second
 		}
 	}

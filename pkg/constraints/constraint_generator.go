@@ -8,9 +8,6 @@ import (
 )
 
 // ConstraintGenerator generates solver constraints given an entity querier interface
-type ConstraintGenerator interface {
-	GetVariables(ctx context.Context, querier entitysource.EntityQuerier) ([]sat.Variable, error)
-}
 type IConstraintGenerator interface {
 	GetVariables(ctx context.Context, querier entitysource.EntityQuerier) ([]sat.IVariable, error)
 }
