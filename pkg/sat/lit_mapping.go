@@ -112,9 +112,7 @@ func NewILitMapping(variables []IVariable) (*ILitMapping, error) {
 	}
 
 	for _, variable := range variables {
-		fmt.Printf("Variable %v\n", variable.Identifier())
 		for _, constraint := range variable.Constraints() {
-			fmt.Printf("constraint %v\n", constraint)
 			var m z.Lit
 			switch constraint.ConstraintType {
 			case "mandatory":
@@ -143,9 +141,9 @@ func NewILitMapping(variables []IVariable) (*ILitMapping, error) {
 					subjectLit = subjectLit.Not()
 				}
 				var operandLit z.Lit
-				_, ok = constraint.Properties["operand"]
+				_, ok = constraint.Properties["id"]
 				if ok {
-					operandLit = d.LitOf(constraint.Properties["operand"].(Identifier))
+					operandLit = d.LitOf(constraint.Properties["id"].(Identifier))
 					_, ok = constraint.Properties["isoperandnegated"]
 					if ok && constraint.Properties["isoperandnegated"].(bool) {
 						operandLit = operandLit.Not()
