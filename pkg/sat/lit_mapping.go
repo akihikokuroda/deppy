@@ -112,7 +112,9 @@ func NewILitMapping(variables []IVariable) (*ILitMapping, error) {
 	}
 
 	for _, variable := range variables {
+		fmt.Printf("Variable %v\n", variable.Identifier())
 		for _, constraint := range variable.Constraints() {
+			fmt.Printf("constraint %v\n", constraint)
 			var m z.Lit
 			switch constraint.ConstraintType {
 			case "mandatory":
@@ -135,7 +137,6 @@ func NewILitMapping(variables []IVariable) (*ILitMapping, error) {
 				}
 				m = d.c.CardSort(ms).Leq(constraint.Properties["n"].(int))
 			case "or":
-				fmt.Printf("%+v\n", constraint)
 				subjectLit := d.LitOf(variable.Identifier())
 				_, ok := constraint.Properties["issubjectnegated"]
 				if ok && constraint.Properties["issubjectnegated"].(bool) {
@@ -156,6 +157,7 @@ func NewILitMapping(variables []IVariable) (*ILitMapping, error) {
 				// This constraint doesn't have a
 				// useful representation in the SAT
 				// inputs.
+				fmt.Printf("Continue %v\n", variable.Identifier())
 				continue
 			}
 
