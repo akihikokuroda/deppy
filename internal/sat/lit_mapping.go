@@ -8,13 +8,13 @@ import (
 	"github.com/go-air/gini/logic"
 	"github.com/go-air/gini/z"
 
-	pkgsat "github.com/operator-framework/deppy/pkg/sat"
+	pkgconstraints "github.com/operator-framework/deppy/pkg/constraints"
 )
 
-type DuplicateIdentifier pkgsat.Identifier
+type DuplicateIdentifier pkgconstraints.Identifier
 
 func (e DuplicateIdentifier) Error() string {
-	return fmt.Sprintf("duplicate identifier %q in input", pkgsat.Identifier(e))
+	return fmt.Sprintf("duplicate identifier %q in input", pkgconstraints.Identifier(e))
 }
 
 type inconsistentLitMapping []error
@@ -26,13 +26,13 @@ func (inconsistentLitMapping) Error() string {
 // zeroVariable is returned by VariableOf in error cases.
 type zeroIVariable struct{}
 
-var _ pkgsat.IVariable = zeroIVariable{}
+var _ pkgconstraints.IVariable = zeroIVariable{}
 
-func (zeroIVariable) Identifier() pkgsat.Identifier {
+func (zeroIVariable) Identifier() pkgconstraints.Identifier {
 	return ""
 }
 
-func (zeroIVariable) Constraints() []pkgsat.IConstraint {
+func (zeroIVariable) Constraints() []pkgconstraints.IConstraint {
 	return nil
 }
 
@@ -40,10 +40,10 @@ func (zeroIVariable) Constraints() []pkgsat.IConstraint {
 // Solve (Constraints, Variables, etc.) and the variables that
 // appear in the SAT formula.
 type ILitMapping struct {
-	inorder     []pkgsat.IVariable
-	variables   map[z.Lit]pkgsat.IVariable
-	lits        map[pkgsat.Identifier]z.Lit
-	constraints map[z.Lit]pkgsat.IAppliedConstraint
+	inorder     []pkgconstraints.IVariable
+	variables   map[z.Lit]pkgconstraints.IVariable
+	lits        map[pkgconstraints.Identifier]z.Lit
+	constraints map[z.Lit]pkgconstraints.IAppliedConstraint
 	c           *logic.C
 	errs        inconsistentLitMapping
 }
@@ -52,12 +52,12 @@ type ILitMapping struct {
 // the provided slice of Variables. This includes construction of
 // the translation tables between Variables/Constraints and the
 // inputs to the underlying solver.
-func NewILitMapping(variables []pkgsat.IVariable) (*ILitMapping, error) {
+func NewILitMapping(variables []pkgconstraints.IVariable) (*ILitMapping, error) {
 	d := ILitMapping{
 		inorder:     variables,
-		variables:   make(map[z.Lit]pkgsat.IVariable, len(variables)),
-		lits:        make(map[pkgsat.Identifier]z.Lit, len(variables)),
-		constraints: make(map[z.Lit]pkgsat.IAppliedConstraint),
+		variables:   make(map[z.Lit]pkgconstraints.IVariable, len(variables)),
+		lits:        make(map[pkgconstraints.Identifier]z.Lit, len(variables)),
+		constraints: make(map[z.Lit]pkgconstraints.IAppliedConstraint),
 		c:           logic.NewCCap(len(variables)),
 	}
 
@@ -83,14 +83,14 @@ func NewILitMapping(variables []pkgsat.IVariable) (*ILitMapping, error) {
 				m = d.LitOf(variable.Identifier()).Not()
 			case "dependency":
 				m = d.LitOf(variable.Identifier()).Not()
-				for _, each := range constraint.Properties["ids"].([]pkgsat.Identifier) {
+				for _, each := range constraint.Properties["ids"].([]pkgconstraints.Identifier) {
 					m = d.c.Or(m, d.LitOf(each))
 				}
 			case "conflict":
-				m = d.c.Or(d.LitOf(variable.Identifier()).Not(), d.LitOf(pkgsat.Identifier(constraint.Properties["id"].(pkgsat.Identifier))).Not())
+				m = d.c.Or(d.LitOf(variable.Identifier()).Not(), d.LitOf(pkgconstraints.Identifier(constraint.Properties["id"].(pkgconstraints.Identifier))).Not())
 			case "atmost":
-				ms := make([]z.Lit, len(constraint.Properties["ids"].([]pkgsat.Identifier)))
-				for i, each := range constraint.Properties["ids"].([]pkgsat.Identifier) {
+				ms := make([]z.Lit, len(constraint.Properties["ids"].([]pkgconstraints.Identifier)))
+				for i, each := range constraint.Properties["ids"].([]pkgconstraints.Identifier) {
 					ms[i] = d.LitOf(each)
 				}
 				m = d.c.CardSort(ms).Leq(constraint.Properties["n"].(int))
@@ -103,7 +103,7 @@ func NewILitMapping(variables []pkgsat.IVariable) (*ILitMapping, error) {
 				var operandLit z.Lit
 				_, ok = constraint.Properties["id"]
 				if ok {
-					operandLit = d.LitOf(constraint.Properties["id"].(pkgsat.Identifier))
+					operandLit = d.LitOf(constraint.Properties["id"].(pkgconstraints.Identifier))
 					_, ok = constraint.Properties["isoperandnegated"]
 					if ok && constraint.Properties["isoperandnegated"].(bool) {
 						operandLit = operandLit.Not()
@@ -119,7 +119,7 @@ func NewILitMapping(variables []pkgsat.IVariable) (*ILitMapping, error) {
 				continue
 			}
 
-			d.constraints[m] = pkgsat.IAppliedConstraint{
+			d.constraints[m] = pkgconstraints.IAppliedConstraint{
 				Variable:   variable,
 				Constraint: constraint,
 			}
@@ -131,7 +131,7 @@ func NewILitMapping(variables []pkgsat.IVariable) (*ILitMapping, error) {
 
 // LitOf returns the positive literal corresponding to the Variable
 // with the given Identifier.
-func (d *ILitMapping) LitOf(id pkgsat.Identifier) z.Lit {
+func (d *ILitMapping) LitOf(id pkgconstraints.Identifier) z.Lit {
 	m, ok := d.lits[id]
 	if ok {
 		return m
@@ -142,7 +142,7 @@ func (d *ILitMapping) LitOf(id pkgsat.Identifier) z.Lit {
 
 // VariableOf returns the Variable corresponding to the provided
 // literal, or a zeroVariable if no such Variable exists.
-func (d *ILitMapping) VariableOf(m z.Lit) pkgsat.IVariable {
+func (d *ILitMapping) VariableOf(m z.Lit) pkgconstraints.IVariable {
 	i, ok := d.variables[m]
 	if ok {
 		return i
@@ -154,14 +154,14 @@ func (d *ILitMapping) VariableOf(m z.Lit) pkgsat.IVariable {
 // ConstraintOf returns the constraint application corresponding to
 // the provided literal, or a zeroConstraint if no such constraint
 // exists.
-func (d *ILitMapping) ConstraintOf(m z.Lit) pkgsat.IAppliedConstraint {
+func (d *ILitMapping) ConstraintOf(m z.Lit) pkgconstraints.IAppliedConstraint {
 	if a, ok := d.constraints[m]; ok {
 		return a
 	}
 	d.errs = append(d.errs, fmt.Errorf("no constraint corresponding to %s", m))
-	return pkgsat.IAppliedConstraint{
+	return pkgconstraints.IAppliedConstraint{
 		Variable:   zeroIVariable{},
-		Constraint: pkgsat.IConstraint{ConstraintType: "zero", Order: nil},
+		Constraint: pkgconstraints.IConstraint{ConstraintType: "zero", Order: nil},
 	}
 }
 
@@ -213,8 +213,8 @@ func (d *ILitMapping) CardinalityConstrainer(g inter.Adder, ms []z.Lit) *logic.C
 // AnchorIdentifiers returns a slice containing the Identifiers of
 // every Variable with at least one "anchor" constraint, in the
 // order they appear in the input.
-func (d *ILitMapping) AnchorIdentifiers() []pkgsat.Identifier {
-	var ids []pkgsat.Identifier
+func (d *ILitMapping) AnchorIdentifiers() []pkgconstraints.Identifier {
+	var ids []pkgconstraints.Identifier
 	for _, variable := range d.inorder {
 		for _, constraint := range variable.Constraints() {
 			if constraint.Anchor {
@@ -226,8 +226,8 @@ func (d *ILitMapping) AnchorIdentifiers() []pkgsat.Identifier {
 	return ids
 }
 
-func (d *ILitMapping) Variables(g inter.S) []pkgsat.IVariable {
-	var result []pkgsat.IVariable
+func (d *ILitMapping) Variables(g inter.S) []pkgconstraints.IVariable {
+	var result []pkgconstraints.IVariable
 	for _, i := range d.inorder {
 		if g.Value(d.LitOf(i.Identifier())) {
 			result = append(result, i)
@@ -248,9 +248,9 @@ func (d *ILitMapping) Lits(dst []z.Lit) []z.Lit {
 	return dst
 }
 
-func (d *ILitMapping) Conflicts(g inter.Assumable) []pkgsat.IAppliedConstraint {
+func (d *ILitMapping) Conflicts(g inter.Assumable) []pkgconstraints.IAppliedConstraint {
 	whys := g.Why(nil)
-	as := make([]pkgsat.IAppliedConstraint, 0, len(whys))
+	as := make([]pkgconstraints.IAppliedConstraint, 0, len(whys))
 	for _, why := range whys {
 		if a, ok := d.constraints[why]; ok {
 			as = append(as, a)

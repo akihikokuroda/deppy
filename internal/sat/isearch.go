@@ -6,7 +6,7 @@ import (
 	"github.com/go-air/gini/inter"
 	"github.com/go-air/gini/z"
 
-	pkgsat "github.com/operator-framework/deppy/pkg/sat"
+	pkgconstraints "github.com/operator-framework/deppy/pkg/constraints"
 )
 
 type Choice struct {
@@ -204,8 +204,8 @@ func (h *ISearch) Do(ctx context.Context, anchors []z.Lit) (int, []z.Lit, map[z.
 	return result, lits, set
 }
 
-func (h *ISearch) Variables() []pkgsat.IVariable {
-	result := make([]pkgsat.IVariable, 0, len(h.guesses))
+func (h *ISearch) Variables() []pkgconstraints.IVariable {
+	result := make([]pkgconstraints.IVariable, 0, len(h.guesses))
 	for _, g := range h.guesses {
 		if g.m != z.LitNull {
 			result = append(result, h.Slits.VariableOf(g.candidates[g.index]))
@@ -214,6 +214,6 @@ func (h *ISearch) Variables() []pkgsat.IVariable {
 	return result
 }
 
-func (h *ISearch) Conflicts() []pkgsat.IAppliedConstraint {
+func (h *ISearch) Conflicts() []pkgconstraints.IAppliedConstraint {
 	return h.Slits.Conflicts(h.S)
 }

@@ -5,7 +5,6 @@ import (
 
 	pkgconstraints "github.com/operator-framework/deppy/pkg/constraints"
 	"github.com/operator-framework/deppy/pkg/entitysource"
-	"github.com/operator-framework/deppy/pkg/sat"
 )
 
 /*
@@ -48,9 +47,9 @@ func INewConstraintAggregator(constraintGenerators []pkgconstraints.IConstraintG
 	}
 }
 
-func (b *IConstraintAggregator) GetVariables(ctx context.Context, entityQuerier entitysource.EntityQuerier) ([]sat.IVariable, error) {
+func (b *IConstraintAggregator) GetVariables(ctx context.Context, entityQuerier entitysource.EntityQuerier) ([]pkgconstraints.IVariable, error) {
 	// TODO: refactor to scatter cather through go routines
-	variables := make([]sat.IVariable, 0)
+	variables := make([]pkgconstraints.IVariable, 0)
 	for _, constraintGenerator := range b.constraintGenerators {
 		vars, err := constraintGenerator.GetVariables(ctx, entityQuerier)
 		if err != nil {

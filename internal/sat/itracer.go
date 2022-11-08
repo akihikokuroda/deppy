@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 
-	pkgsat "github.com/operator-framework/deppy/pkg/sat"
+	pkgconstraints "github.com/operator-framework/deppy/pkg/constraints"
 )
 
 type ISearchPosition interface {
-	Variables() []pkgsat.IVariable
-	Conflicts() []pkgsat.IAppliedConstraint
+	Variables() []pkgconstraints.IVariable
+	Conflicts() []pkgconstraints.IAppliedConstraint
 }
 
 type ITracer interface {

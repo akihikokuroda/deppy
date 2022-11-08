@@ -1,4 +1,4 @@
-package sat
+package constraints
 
 // Mandatory returns a Constraint that will permit only solutions that
 // contain a particular Variable.
